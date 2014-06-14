@@ -1,5 +1,6 @@
 import nltk.classify.util
 import pandas as pd
+import numpy as np
 from nltk.classify import NaiveBayesClassifier
 from nltk.corpus import movie_reviews
 import csv
@@ -19,28 +20,76 @@ with open('test.tsv/test.tsv','rb') as tsvin, open('test.csv', 'wb') as csvout:
     for row in tsvin:
         csvout.writerows([row])
 '''
-df_train = pd.read_csv(loc_train)
-df_test = pd.read_csv(loc_test)
+Phrase = ['']
+Phrase_label = ['']
+data = open('train.csv','r')
+for row in csv.DictReader(data):
+    Phrase.append(row['Phrase'])
+    Phrase_label.append(row['Sentiment'])
+data.close()
 
-Phrase = df_train['Phrase']
-Phrase_test = df_test['Phrase']
+Phrase = Phrase[1:len(Phrase)]
+Phrase_label = Phrase_label[1:len(Phrase_label)]
+Phrase_label = [int(numeric_string) for numeric_string in Phrase_label]
 
+Cases = len(Phrase)
+
+Phrase_test = ['']
+Phrase_label_test = ['']
+data = open('test.csv','r')
+for row in csv.DictReader(data):
+    Phrase_test.append(row['Phrase'])
+data.close()
+
+Phrase_test = Phrase_test[1:len(Phrase_test)]
+''' 
+df_train = pd.DataFrame(pd.read_csv(loc_train))
+'''
+df_test = pd.DataFrame(pd.read_csv(loc_test))
+
+positive = map(lambda i : i>2 , Phrase_label[0:Cases])
+
+negetive = map(lambda i : i<=2 , Phrase_label[0:Cases])
+
+pos_feats = ['']
+neg_feats = ['']
+for row in range(Cases):
+    if(positive[row]==True):
+        pos_feats.append(Phrase[row])
+    else:
+        neg_feats.append(Phrase[row])
+pos_feats = pos_feats[1:len(pos_feats)]
+neg_feats = neg_feats[1:len(neg_feats)]
+'''
 #negids = movie_reviews.fileids('neg')
 #posids = movie_reviews.fileids('pos')
-''' 
-negfeats = [(word_feats(movie_reviews.words(fileids=[f])), 'neg') for f in negids]
-posfeats = [(word_feats(movie_reviews.words(fileids=[f])), 'pos') for f in posids]
+'''
+negfeats = [(word_feats( str(neg_feats[k]).split()), '2') for k in range(0,len(neg_feats),1)]
+posfeats = [(word_feats( str(pos_feats[k]).split()), '3') for k in range(0,len(pos_feats),1)]
+# Real test cases , 'pop' means nothing
+testfeats = [(word_feats( str(Phrase_test[k]).split()), 'pop') for k in range(0,len(Phrase_test),1)]
 
-negcutoff = len(negfeats)*3/4
-poscutoff = len(posfeats)*3/4
-''' 
-trainfeats = Phrase[1:1000]
-testfeats = Phrase[1000:1500]
+#neucutoff = len(neufeats)*4/5
+negcutoff = len(negfeats)*1
+poscutoff = len(posfeats)*1
+
+trainfeats = negfeats[:negcutoff] + posfeats[:poscutoff] #+ neufeats[:neucutoff]
+#testfeats = negfeats[negcutoff:Cases] + posfeats[poscutoff:Cases] #+ neufeats[neucutoff:Cases]
+#trainfeats = negfeats[:100] + posfeats[:100]
+#testfeats = negfeats[100:150] + posfeats[100:150]
 
 print 'train on %d instances, test on %d instances' % (len(trainfeats), len(testfeats))
  
 classifier = NaiveBayesClassifier.train(trainfeats)
-'''
-print 'accuracy:', nltk.classify.util.accuracy(classifier, testfeats)
+
+#print 'accuracy:', nltk.classify.util.accuracy(classifier, testfeats)
 classifier.show_most_informative_features()
-'''
+
+results = classifier.batch_classify([fs for (fs,l) in testfeats])
+
+count = 0
+with open(loc_submission, "wb") as outfile:
+    outfile.write("PhraseID,Sentiment\n")
+    for val in results:
+      outfile.write("%s,%s\n"%(df_test['PhraseId'][count],val))
+      count += 1
