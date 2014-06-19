@@ -7,6 +7,12 @@ import csv
  
 def word_feats(words):
     return dict([(word, True) for word in words])
+
+def find_bigrams(input_list):
+    bigram_list = []
+    for i in range(len(input_list)-1):
+        bigram_list.append((input_list[i], input_list[i+1]))
+    return bigram_list
  
 if __name__ == "__main__":
   loc_train = "train.csv"
@@ -64,32 +70,34 @@ neg_feats = neg_feats[1:len(neg_feats)]
 #negids = movie_reviews.fileids('neg')
 #posids = movie_reviews.fileids('pos')
 '''
-negfeats = [(word_feats( str(neg_feats[k]).split()), '2') for k in range(0,len(neg_feats),1)]
-posfeats = [(word_feats( str(pos_feats[k]).split()), '3') for k in range(0,len(pos_feats),1)]
+#str(neg_feats[k]).split() +
+negfeats = [(word_feats(  find_bigrams( str(neg_feats[k]).split() ) ), '2') for k in range(0,len(neg_feats),1)]
+posfeats = [(word_feats(  find_bigrams( str(pos_feats[k]).split() ) ), '3') for k in range(0,len(pos_feats),1)]
 # Real test cases , 'pop' means nothing
-testfeats = [(word_feats( str(Phrase_test[k]).split()), 'pop') for k in range(0,len(Phrase_test),1)]
+#testfeats = [(word_feats( str(Phrase_test[k]).split()), 'pop') for k in range(0,len(Phrase_test),1)]
 
 #neucutoff = len(neufeats)*4/5
-negcutoff = len(negfeats)*1
-poscutoff = len(posfeats)*1
+negcutoff = len(negfeats)*4/5
+poscutoff = len(posfeats)*4/5
 
 trainfeats = negfeats[:negcutoff] + posfeats[:poscutoff] #+ neufeats[:neucutoff]
-#testfeats = negfeats[negcutoff:Cases] + posfeats[poscutoff:Cases] #+ neufeats[neucutoff:Cases]
-#trainfeats = negfeats[:100] + posfeats[:100]
-#testfeats = negfeats[100:150] + posfeats[100:150]
+testfeats = negfeats[negcutoff:] + posfeats[poscutoff:] #+ neufeats[neucutoff:Cases]
 
 print 'train on %d instances, test on %d instances' % (len(trainfeats), len(testfeats))
  
 classifier = NaiveBayesClassifier.train(trainfeats)
-
-#print 'accuracy:', nltk.classify.util.accuracy(classifier, testfeats)
+#classifier = nltk.classify.DecisionTreeClassifier.train(trainfeats)
+#classifier = SklearnClassifier(BernoulliNB()).train(trainfeats)
+print 'accuracy:', nltk.classify.util.accuracy(classifier, testfeats)
 classifier.show_most_informative_features()
 
-results = classifier.batch_classify([fs for (fs,l) in testfeats])
+#results = classifier.batch_classify([fs for (fs,l) in testfeats])
 
 count = 0
+'''
 with open(loc_submission, "wb") as outfile:
     outfile.write("PhraseID,Sentiment\n")
     for val in results:
       outfile.write("%s,%s\n"%(df_test['PhraseId'][count],val))
       count += 1
+'''
